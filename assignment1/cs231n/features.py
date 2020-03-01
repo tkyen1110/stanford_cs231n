@@ -23,7 +23,7 @@ def extract_features(imgs, feature_fns, verbose=False):
     - verbose: Boolean; if true, print progress.
 
     Returns:
-    An array of shape (N, F_1 + ... + F_k) where each column is the concatenation
+    An array of shape (N, F_1 + ... + F_k) where each row is the concatenation
     of all features for a single image.
     """
     num_images = imgs.shape[0]
@@ -40,7 +40,7 @@ def extract_features(imgs, feature_fns, verbose=False):
         first_image_features.append(feats)
 
     # Now that we know the dimensions of the features, we can allocate a single
-    # big array to store all features as columns.
+    # big array to store all features as rows.
     total_feature_dim = sum(feature_dims)
     imgs_features = np.zeros((num_images, total_feature_dim))
     imgs_features[0] = np.hstack(first_image_features).T
