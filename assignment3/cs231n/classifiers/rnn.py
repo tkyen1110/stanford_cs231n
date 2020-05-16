@@ -156,6 +156,10 @@ class CaptioningRNN(object):
         #     rnn_or_lstm_out: (N, T-1, H)
         if self.cell_type == 'rnn':
             rnn_or_lstm_out, rnn_cache = rnn_forward(word_embedding_out, affine_out, Wx, Wh, b)
+        elif self.cell_type == 'lstm':
+            rnn_or_lstm_out, lstm_cache = lstm_forward(word_embedding_out, affine_out, Wx, Wh, b)
+        else:
+            raise ValueError('Invalid cell_type "%s"' % self.cell_type)
 
         # (4) rnn_or_lstm_out: (N, T-1, H) ; W_vocab: (H, V) ; b_vocab: (V, ) ;
         #     temporal_affine_out: (N, T-1, V)
@@ -173,6 +177,10 @@ class CaptioningRNN(object):
         # (3)
         if self.cell_type == 'rnn':
             dword_embedding_out, daffine_out, grads['Wx'], grads['Wh'], grads['b'] = rnn_backward(drnn_or_lstm_out, rnn_cache)
+        elif self.cell_type == 'lstm':
+            dword_embedding_out, daffine_out, grads['Wx'], grads['Wh'], grads['b'] = lstm_backward(drnn_or_lstm_out, lstm_cache)
+        else:
+            raise ValueError('Invalid cell_type "%s"' % self.cell_type)
 
         # (2)
         grads['W_embed'] = word_embedding_backward(dword_embedding_out, word_embedding_cache)
@@ -249,12 +257,18 @@ class CaptioningRNN(object):
 
         prev_word_idx = [self._start]*N
         prev_h = affine_out
+        prev_c = np.zeros(prev_h.shape)
         captions[:,0] = self._start
 
         for i in range(1, max_length):
             prev_word_embed  = W_embed[prev_word_idx]
             if self.cell_type == 'rnn':
                 next_h, rnn_step_cache = rnn_step_forward(prev_word_embed, prev_h, Wx, Wh, b)
+            elif self.cell_type == 'lstm':
+                next_h, next_c, lstm_step_cache = lstm_step_forward(prev_word_embed, prev_h, prev_c, Wx, Wh, b)
+                prev_c = next_c
+            else:
+                raise ValueError('Invalid cell_type "%s"' % self.cell_type)
 
             vocab_affine_out, vocab_affine_out_cache = affine_forward(next_h, W_vocab, b_vocab)
             captions[:,i] = list(np.argmax(vocab_affine_out, axis = 1))
